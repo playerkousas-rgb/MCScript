@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC 提詞器 Pro</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&amp;display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', system-ui, sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .header {
+            background-color: #111;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .role-btn {
+            background-color: #1a1a1a;
+            color: #00d4ff;
+            border: 2px solid #00d4ff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .script-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            scroll-behavior: smooth;
+        }
+        
+        .line {
+            display: flex;
+            align-items: flex-start;
+            padding: 14px 20px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .line.my-role {
+            border: 3px solid #00d4ff;
+            background-color: rgba(0, 212, 255, 0.12);
+        }
+        
+        .line.current {
+            background-color: #ffcc00 !important;
+            color: #000 !important;
+            font-weight: 700;
+            border: none;
+        }
+        
+        .role-tag {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 2px 10px;
+            border-radius: 6px;
+            margin-right: 12px;
+            flex-shrink: 0;
+            margin-top: 3px;
+        }
+        
+        .line-text {
+            flex: 1;
+            line-height: 1.5;
+            font-size: 22px;
+        }
+        
+        .controls {
+            background-color: #111;
+            padding: 16px 20px;
+            border-top: 1px solid #333;
+            flex-shrink: 0;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: #0066ff;
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: #00aa44;
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: #cc0000;
+            color: white;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            margin-top: 8px;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            border-radius: 10px;
+            border: 2px solid #444;
+            background: #222;
+            color: white;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div>
+                    <div class="title">MC 提詞器 Pro</div>
+                    <div id="progress" style="font-size:13px; color:#888;">尚未載入講稿</div>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button onclick="showRoleModal()" class="role-btn">
+                    👤 <span id="current-role">司儀</span>
+                </button>
+                
+                <button onclick="importScript()" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;">
+                    📁 匯入講稿
+                </button>
+                
+                <button onclick="showHelpModal()" class="btn" style="background:#333; color:white; padding:8px 14px; font-size:14px;">
+                    ❓ 說明
+                </button>
+            </div>
+        </div>
+
+        <div id="script-area" class="script-container">
+            <div class="empty-state" id="empty-state">
+                <h2>歡迎使用 MC 提詞器</h2>
+                <p style="color:#888; max-width:300px;">請先匯入你的司儀講稿（.txt 檔案）</p>
+                <button onclick="importScript()" class="btn btn-primary" style="margin-top: 20px; padding: 14px 40px;">
+                    匯入講稿
+                </button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="listen-btn" onclick="toggleListening()" class="btn btn-success" style="flex:1; max-width:220px;">
+                    🎤 開始語音跟隨
+                </button>
+                
+                <button onclick="resetPosition()" class="btn" style="background:#333; color:white; flex:1; max-width:120px;">
+                    重置位置
+                </button>
+            </div>
+            
+            <div class="status" id="status-text">準備就緒</div>
+        </div>
+    </div>
+
+    <!-- 角色輸入彈窗 -->
+    <div id="role-modal" class="modal">
+        <div class="modal-content">
+            <h3 style="text-align:center; margin-bottom:15px;">請輸入你的角色名稱</h3>
+            <p style="text-align:center; color:#888; font-size:14px;">例如：司儀、莫穎民、司儀A</p>
+            
+            <input type="text" id="role-input" placeholder="輸入角色名稱" value="司儀">
+            
+            <div style="margin-top:20px; display:flex; gap:10px;">
+                <button onclick="confirmRole()" class="btn btn-primary" style="flex:1;">
+                    確認
+                </button>
+                <button onclick="closeRoleModal()" class="btn" style="flex:1; background:#444; color:white;">
+                    取消
+                </button>
+            </div>
+            
+            <div style="margin-top:20px;">
+                <p style="font-size:13px; color:#666; text-align:center;">常用角色：</p>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
+                    <button onclick="quickSelectRole('司儀')" style="padding:6px 12px; font-size:13px; background:#333; color:white; border:none; border-radius:6px;">司儀</button>
+                    <button onclick="quickSelectRole('會長')" style="padding:6px 12px; font-size:13px; background:#333; color:white; border:none; border-radius:6px;">會長</button>
+                    <button onclick="quickSelectRole('區總監')" style="padding:6px 12px; font-size:13px; background:#333; color:white; border:none; border-radius:6px;">區總監</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 使用說明彈窗 -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <h3 style="text-align:center; margin-bottom:15px;">MC 提詞器 使用說明</h3>
+            
+            <div style="text-align:left; line-height:1.6; font-size:15px;">
+                <p><strong>使用步驟：</strong></p>
+                <ol style="padding-left:20px;">
+                    <li>點擊「匯入講稿」，選擇你的 .txt 講稿</li>
+                    <li>點擊右上角角色按鈕，輸入你的角色（例如：司儀）</li>
+                    <li>點擊「開始語音跟隨」</li>
+                </ol>
+                
+                <p><strong>效果：</strong></p>
+                <ul style="padding-left:20px;">
+                    <li>青色框 = 你要讀的句子</li>
+                    <li>黃色背景 = 現在進行到的句子</li>
+                    <li>語音自動捲動，雙手不用動</li>
+                </ul>
+                
+                <p><strong>注意：</strong></p>
+                <ul style="padding-left:20px;">
+                    <li>建議使用 Safari 開啟</li>
+                    <li>第一次會要求麥克風權限</li>
+                    <li>可隨時更改角色</li>
+                </ul>
+            </div>
+            
+            <div style="margin-top:25px; text-align:center;">
+                <button onclick="closeHelpModal()" class="btn btn-primary" style="padding:10px 40px;">
+                    知道了
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let scriptLines = [];
+        let currentIndex = 0;
+        let isListening = false;
+        let recognition = null;
+        let myRole = "司儀";
+        
+        function updateProgress() {
+            const progressEl = document.getElementById('progress');
+            if (scriptLines.length > 0) {
+                progressEl.innerHTML = `整體進度：第 ${currentIndex + 1} / ${scriptLines.length} 行`;
+            } else {
+                progressEl.innerHTML = '尚未載入講稿';
+            }
+        }
+        
+        function importScript() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.txt';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const content = ev.target.result;
+                    const lines = content.split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0);
+                    
+                    if (lines.length > 0) {
+                        scriptLines = lines;
+                        currentIndex = 0;
+                        document.getElementById('empty-state').style.display = 'none';
+                        renderScript();
+                        updateProgress();
+                        document.getElementById('status-text').innerText = '講稿已載入';
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+        
+        function extractRole(line) {
+            const match = line.match(/^([^：:]+)[：:]\s*/);
+            if (match) {
+                return match[1].trim();
+            }
+            const roles = ['司儀', '會長', '區總監', '地域總監', '區主席', '區司庫', '區秘書'];
+            for (let role of roles) {
+                if (line.startsWith(role)) {
+                    return role;
+                }
+            }
+            return null;
+        }
+        
+        function renderScript() {
+            const container = document.getElementById('script-area');
+            container.innerHTML = '';
+            
+            scriptLines.forEach((line, index) => {
+                const div = document.createElement('div');
+                div.className = 'line';
+                
+                const role = extractRole(line);
+                const isMyRole = role === myRole;
+                
+                if (isMyRole) {
+                    div.classList.add('my-role');
+                }
+                
+                if (index === currentIndex) {
+                    div.classList.add('current');
+                }
+                
+                let roleTag = '';
+                if (role) {
+                    const color = getRoleColor(role);
+                    roleTag = `<span class="role-tag" style="background:${color}20; color:${color};">${role}</span>`;
+                }
+                
+                div.innerHTML = `
+                    <div style="display:flex; width:100%; align-items:flex-start;">
+                        ${roleTag}
+                        <div class="line-text">${line}</div>
+                    </div>
+                `;
+                
+                div.onclick = () => {
+                    if (!isListening) {
+                        currentIndex = index;
+                        renderScript();
+                        updateProgress();
+                    }
+                };
+                
+                container.appendChild(div);
+            });
+            
+            setTimeout(() => {
+                const currentLine = container.querySelector('.current');
+                if (currentLine) {
+                    currentLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
+        
+        function getRoleColor(role) {
+            const colors = {
+                '司儀': '#00d4ff',
+                '會長': '#ff9500',
+                '區總監': '#30d158',
+                '地域總監': '#af52de',
+                '區主席': '#ff2d55',
+                '區司庫': '#ffcc00'
+            };
+            return colors[role] || '#00d4ff';
+        }
+        
+        function showRoleModal() {
+            document.getElementById('role-modal').style.display = 'flex';
+            document.getElementById('role-input').value = myRole;
+            document.getElementById('role-input').focus();
+            document.getElementById('role-input').select();
+        }
+        
+        function closeRoleModal() {
+            document.getElementById('role-modal').style.display = 'none';
+        }
+        
+        function confirmRole() {
+            const input = document.getElementById('role-input').value.trim();
+            if (input) {
+                myRole = input;
+                document.getElementById('current-role').innerText = input;
+            }
+            closeRoleModal();
+            
+            if (scriptLines.length > 0) {
+                renderScript();
+            }
+        }
+        
+        function quickSelectRole(role) {
+            myRole = role;
+            document.getElementById('current-role').innerText = role;
+            closeRoleModal();
+            
+            if (scriptLines.length > 0) {
+                renderScript();
+            }
+        }
+        
+        function toggleListening() {
+            if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+                alert('你的瀏覽器不支援語音辨識，請使用 Safari');
+                return;
+            }
+            
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+        
+        function startListening() {
+            if (scriptLines.length === 0) {
+                alert('請先匯入講稿');
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            recognition.lang = 'zh-HK';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            
+            recognition.onresult = function(event) {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    }
+                }
+                if (finalTranscript.trim() !== '') {
+                    processRecognizedText(finalTranscript);
+                }
+            };
+            
+            recognition.onerror = function() {
+                stopListening();
+            };
+            
+            recognition.onend = function() {
+                if (isListening) recognition.start();
+            };
+            
+            try {
+                recognition.start();
+                isListening = true;
+                document.getElementById('listen-btn').innerHTML = '⏹ 停止聆聽';
+                document.getElementById('listen-btn').classList.remove('btn-success');
+                document.getElementById('listen-btn').classList.add('btn-danger');
+                document.getElementById('status-text').innerText = '正在聆聽...';
+            } catch(e) {
+                alert('無法啟動語音辨識');
+            }
+        }
+        
+        function stopListening() {
+            if (recognition) recognition.stop();
+            isListening = false;
+            document.getElementById('listen-btn').innerHTML = '🎤 開始語音跟隨';
+            document.getElementById('listen-btn').classList.remove('btn-danger');
+            document.getElementById('listen-btn').classList.add('btn-success');
+            document.getElementById('status-text').innerText = '已停止';
+        }
+        
+        function processRecognizedText(text) {
+            if (!isListening || scriptLines.length === 0) return;
+            
+            const normalized = normalizeText(text);
+            const keywords = ['動議', '和議', '有無人反對', '宣佈通過', '請一位動議', '多謝', '現在恭請', '確認通過'];
+            
+            for (let keyword of keywords) {
+                if (normalized.includes(normalizeText(keyword))) {
+                    advancePosition();
+                    return;
+                }
+            }
+            
+            let bestScore = 0;
+            let bestIndex = currentIndex;
+            const searchEnd = Math.min(currentIndex + 8, scriptLines.length);
+            
+            for (let i = currentIndex; i < searchEnd; i++) {
+                const score = calculateSimilarity(normalized, normalizeText(scriptLines[i]));
+                if (score > bestScore && score > 0.55) {
+                    bestScore = score;
+                    bestIndex = i;
+                }
+            }
+            
+            if (bestScore > 0.55 && bestIndex !== currentIndex) {
+                currentIndex = bestIndex;
+                renderScript();
+                updateProgress();
+            }
+        }
+        
+        function normalizeText(text) {
+            return text.toLowerCase().replace(/[\p{P}\p{S}]/gu, '').trim();
+        }
+        
+        function calculateSimilarity(str1, str2) {
+            if (str2.includes(str1) || str1.includes(str2)) return 0.9;
+            const words1 = new Set(str1.split(/\s+/));
+            const words2 = new Set(str2.split(/\s+/));
+            let intersection = 0;
+            words1.forEach(word => { if (words2.has(word)) intersection++; });
+            const union = words1.size + words2.size - intersection;
+            return union > 0 ? intersection / union : 0;
+        }
+        
+        function advancePosition() {
+            if (currentIndex < scriptLines.length - 1) {
+                currentIndex += 2;
+                if (currentIndex >= scriptLines.length) currentIndex = scriptLines.length - 1;
+                renderScript();
+                updateProgress();
+            }
+        }
+        
+        function resetPosition() {
+            currentIndex = 0;
+            renderScript();
+            updateProgress();
+        }
+        
+        function showHelpModal() {
+            document.getElementById('help-modal').style.display = 'flex';
+        }
+        
+        function closeHelpModal() {
+            document.getElementById('help-modal').style.display = 'none';
+        }
+        
+        function init() {
+            document.getElementById('current-role').innerText = myRole;
+            
+            document.getElementById('role-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    confirmRole();
+                }
+            });
+        }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
