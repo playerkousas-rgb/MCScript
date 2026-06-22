@@ -346,9 +346,16 @@
                 const reader = new FileReader();
                 reader.onload = function(ev) {
                     const content = ev.target.result;
-                    const lines = content.split('\n')
+                    let lines = content.split('\n')
                         .map(line => line.trim())
                         .filter(line => line.length > 0);
+                    
+                    // 過濾掉只有符號的分隔線（例如 ++****++、----、*** 等）
+                    lines = lines.filter(line => {
+                        // 移除常見分隔符號後，如果還有文字就保留
+                        const cleaned = line.replace(/[+\-*_=~#<>|]+/g, '').trim();
+                        return cleaned.length > 0;
+                    });
                     
                     if (lines.length > 0) {
                         scriptLines = lines;
@@ -357,6 +364,8 @@
                         renderScript();
                         updateProgress();
                         document.getElementById('status-text').innerText = '講稿已載入';
+                    } else {
+                        alert('講稿內容過濾後為空，請確認檔案格式');
                     }
                 };
                 reader.readAsText(file);
