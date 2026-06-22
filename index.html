@@ -234,6 +234,11 @@
             </div>
             
             <div class="status" id="status-text">準備就緒</div>
+            
+            <!-- 即時辨識結果 -->
+            <div id="recognized-text" style="margin-top: 8px; font-size: 14px; color: #888; text-align: center; min-height: 20px;">
+                最新辨識結果：（尚未開始）
+            </div>
         </div>
     </div>
 
@@ -500,6 +505,13 @@
                         finalTranscript += event.results[i][0].transcript;
                     }
                 }
+                
+                // 即時更新辨識結果顯示
+                const recognizedEl = document.getElementById('recognized-text');
+                if (recognizedEl && finalTranscript.trim() !== '') {
+                    recognizedEl.innerHTML = `最新辨識結果：${finalTranscript}`;
+                }
+                
                 if (finalTranscript.trim() !== '') {
                     processRecognizedText(finalTranscript);
                 }
