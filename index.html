@@ -231,6 +231,10 @@
                 <button onclick="resetPosition()" class="btn" style="background:#333; color:white; flex:1; max-width:120px;">
                     重置位置
                 </button>
+                
+                <button onclick="manualNext()" class="btn" style="background:#555; color:white; flex:1; max-width:120px;">
+                    下一行
+                </button>
             </div>
             
             <div class="status" id="status-text">準備就緒</div>
@@ -494,26 +498,31 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             
-            recognition.lang = 'zh-HK';
+            recognition.lang = 'zh-TW';   // 改用 zh-TW，通常對粵語支援較好
             recognition.continuous = true;
             recognition.interimResults = true;
             
             recognition.onresult = function(event) {
-                let finalTranscript = '';
+                let transcript = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    }
+                    transcript += event.results[i][0].transcript;
                 }
                 
-                // 即時更新辨識結果顯示
                 const recognizedEl = document.getElementById('recognized-text');
-                if (recognizedEl && finalTranscript.trim() !== '') {
-                    recognizedEl.innerHTML = `最新辨識結果：${finalTranscript}`;
+                if (recognizedEl && transcript.trim() !== '') {
+                    recognizedEl.innerHTML = `最新辨識結果：${transcript}`;
                 }
                 
-                if (finalTranscript.trim() !== '') {
-                    processRecognizedText(finalTranscript);
+                // === 最簡單版本：只要有辨識結果就直接前進 ===
+                if (transcript.trim() !== '' && scriptLines.length > 0 && currentIndex < scriptLines.length - 1) {
+                    currentIndex++;
+                    console.log("前進到第", currentIndex + 1, "行");
+                    renderScript();
+                    updateProgress();
+                    
+                    if (recognizedEl) {
+                        recognizedEl.innerHTML = `最新辨識結果：${transcript} <span style="color:#0f0;">[已前進]</span>`;
+                    }
                 }
             };
             
@@ -547,35 +556,23 @@
         }
         
         function processRecognizedText(text) {
-            if (!isListening || scriptLines.length === 0) return;
+            console.log("辨識到文字:", text);
+            console.log("目前 scriptLines 長度:", scriptLines.length);
+            console.log("isListening:", isListening);
             
-            const normalized = normalizeText(text);
-            const keywords = ['動議', '和議', '有無人反對', '宣佈通過', '請一位動議', '多謝', '現在恭請', '確認通過'];
-            
-            for (let keyword of keywords) {
-                if (normalized.includes(normalizeText(keyword))) {
-                    advancePosition();
-                    return;
-                }
+            if (!isListening || scriptLines.length === 0) {
+                console.log("條件不符，無法前進");
+                return;
             }
             
-            let bestScore = 0;
-            let bestIndex = currentIndex;
-            const searchEnd = Math.min(currentIndex + 8, scriptLines.length);
+            const recognizedEl = document.getElementById('recognized-text');
             
-            for (let i = currentIndex; i < searchEnd; i++) {
-                const score = calculateSimilarity(normalized, normalizeText(scriptLines[i]));
-                if (score > bestScore && score > 0.55) {
-                    bestScore = score;
-                    bestIndex = i;
-                }
+            if (recognizedEl) {
+                recognizedEl.innerHTML = `最新辨識結果：${text} <span style="color:#0f0;">[已前進]</span>`;
             }
             
-            if (bestScore > 0.55 && bestIndex !== currentIndex) {
-                currentIndex = bestIndex;
-                renderScript();
-                updateProgress();
-            }
+            // 只要有辨識到文字，就強制前進
+            advancePosition(1);
         }
         
         function normalizeText(text) {
@@ -592,10 +589,12 @@
             return union > 0 ? intersection / union : 0;
         }
         
-        function advancePosition() {
+        function advancePosition(steps = 1) {
             if (currentIndex < scriptLines.length - 1) {
-                currentIndex += 2;
-                if (currentIndex >= scriptLines.length) currentIndex = scriptLines.length - 1;
+                currentIndex += steps;
+                if (currentIndex >= scriptLines.length) {
+                    currentIndex = scriptLines.length - 1;
+                }
                 renderScript();
                 updateProgress();
             }
@@ -605,6 +604,10 @@
             currentIndex = 0;
             renderScript();
             updateProgress();
+        }
+        
+        function manualNext() {
+            advancePosition(1);
         }
         
         function showHelpModal() {
